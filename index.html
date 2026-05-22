@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Stoichiometry — Solution Map</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#111;padding:1.5rem;max-width:760px;margin:0 auto}
+input[type=text]{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#111}
+input[type=text]:focus{outline:none;border-color:#555}
+h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.step{background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+.step.locked{opacity:.38;pointer-events:none}
+.step-hd{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.chk{display:none;color:#1a8a4a;font-weight:700}.chk.on{display:inline}
+.fb{font-size:13px;margin-top:10px;padding:8px 12px;border-radius:8px;display:none;line-height:1.6}
+.fb.ok{display:block;background:#f0fdf7;color:#0f6e56;border:1px solid #a0dfc0}
+.fb.err{display:block;background:#fff5f5;color:#c0392b;border:1px solid #f5b0b0}
+.tb-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;align-items:center}
+.tb{font-size:16px;padding:6px 13px;border:1px solid #ccc;border-radius:6px;cursor:pointer;background:#f5f5f5;color:#111;font-weight:600;line-height:1.4;overflow:visible}
+.tb:hover{background:#eee;border-color:#999}
+.sep{width:1px;height:22px;background:#ddd;margin:0 2px;display:inline-block}
+.chip{font-size:12px;padding:3px 10px;border:1px solid #ddd;border-radius:999px;cursor:pointer;color:#555;background:#f5f5f5;display:inline-block;margin:0 4px 6px 0}
+.chip:hover{border-color:#999;color:#111}
+.sub-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.sub-btn{padding:9px 16px;font-size:14px;font-weight:600;border:2px solid #ddd;border-radius:10px;cursor:pointer;background:#f5f5f5;color:#111;font-family:monospace;transition:all .15s}
+.sub-btn:hover{border-color:#888;transform:translateY(-1px)}
+.sub-btn.sel{background:#185FA5;color:#fff;border-color:#185FA5;transform:translateY(-2px);box-shadow:0 3px 8px rgba(24,95,165,.25)}
+.sub-btn.dim{opacity:.3;pointer-events:none;cursor:default}
+
+/* unit buttons - 3 wide for solution option */
+.unit-row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.u-btn{flex:0 0 100px;padding:12px 8px;border:2px solid #ddd;border-radius:10px;cursor:pointer;background:#f5f5f5;color:#888;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.u-btn .ul{font-size:16px;font-weight:700;line-height:1.2}
+.u-btn .ud{font-size:10px;line-height:1.3}
+.u-btn:hover{border-color:#888;color:#111}
+.u-btn.sel{background:#185FA5;border-color:#185FA5;color:#fff}
+.u-btn.sel .ud{color:rgba(255,255,255,.8)}
+
+/* solution sub-inputs */
+.sol-inputs{margin-top:12px;padding:12px;background:#f8f9ff;border:1px solid #dde3f5;border-radius:10px;display:none}
+.sol-inputs.show{display:block}
+.sol-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.sol-field{display:flex;flex-direction:column;gap:4px}
+.sol-field label{font-size:12px;color:#666;font-weight:500}
+.sol-field input{width:120px;padding:7px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#111}
+.sol-field input:focus{outline:none;border-color:#555}
+.sol-unit{font-size:12px;color:#888;margin-top:2px}
+
+.amt-in{width:140px;padding:7px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#111;margin-top:10px;display:block}
+.amt-in:focus{outline:none;border-color:#555}
+.go-btn{padding:10px 24px;font-size:14px;font-weight:700;background:#111;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-top:1rem;display:block}
+.go-btn:hover{background:#333}
+
+/* puzzle */
+.sum-bar{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px;line-height:1.8}
+.chain-row{display:flex;align-items:center;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:1.2rem}
+.op{font-size:20px;color:#bbb;font-weight:300;flex-shrink:0}
+
+/* given block — single line */
+.given-blk{background:#f0f7ff;border:1px solid #b3d4f5;border-radius:10px;padding:0 14px;height:74px;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;flex-shrink:0;gap:4px;white-space:nowrap}
+.g-val{font-size:15px;font-weight:700;white-space:nowrap}
+.g-unit{font-size:15px;font-weight:700;color:#555;white-space:nowrap;transition:color .3s}
+.g-unit.cx{text-decoration:line-through;color:#bbb}
+
+.ans-blk{background:#f0fdf7;border:1px solid #a0dfc0;border-radius:10px;padding:8px 12px;text-align:center;min-width:90px;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.ans-blk .av{font-size:14px;font-weight:700;color:#0f6e56}
+.ans-blk .au{font-size:11px;color:#2a7a5a;margin-top:2px}
+.ans-blk .sf{font-size:10px;color:#888;margin-top:2px}
+.ans-blk .aq{font-size:22px;color:#bbb;font-weight:300}
+
+.slot-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.slot{width:130px;height:74px;border:2px dashed #ccc;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#aaa;cursor:pointer;position:relative;transition:border-color .15s,background .15s;flex-shrink:0}
+.slot.rdy{border-color:#185FA5;background:#eef5ff;animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{from{border-color:#185FA5}to{border-color:#7fb0e0}}
+.slot.occ{border:none;cursor:default}
+.flip-sm{font-size:11px;padding:2px 10px;border:1px solid transparent;border-radius:999px;cursor:pointer;background:transparent;color:transparent;pointer-events:none;white-space:nowrap}
+.flip-sm.on{border-color:#ccc;background:#f5f5f5;color:#666;pointer-events:auto}
+.flip-sm.on:hover{border-color:#888;color:#111}
+.bwrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.card{width:130px;height:74px;border:1.5px solid #ddd;border-radius:10px;background:#fff;display:grid;grid-template-rows:1fr auto 1fr;align-items:center;padding:5px 8px;text-align:center;cursor:pointer;position:relative;transition:border-color .15s,transform .1s;user-select:none}
+.card:hover{border-color:#888;transform:translateY(-2px)}
+.card.sel{border:2.5px solid #185FA5;transform:translateY(-3px)}
+.clbl{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.04em;position:absolute;top:3px;left:0;right:0;text-align:center}
+.cnum{font-size:11px;font-weight:600;color:#111;line-height:1.2;align-self:center;white-space:nowrap}
+.cbar{width:84%;height:1.5px;background:#ddd;margin:0 auto}
+.cden{font-size:11px;color:#111;line-height:1.2;align-self:center;white-space:nowrap}
+.cx{text-decoration:line-through!important;color:#bbb!important}
+.ck{color:#185FA5!important;font-weight:700!important}
+.flip-btn{font-size:11px;padding:2px 10px;border:1px solid #ddd;border-radius:999px;cursor:pointer;background:#f5f5f5;color:#666;white-space:nowrap}
+.flip-btn:hover{border-color:#888;color:#111}
+.bank{display:flex;flex-wrap:wrap;gap:12px;min-height:100px;padding:12px;background:#f9f9f9;border:1.5px dashed #ddd;border-radius:10px;align-items:flex-start;margin-bottom:1rem}
+.ok-note{font-size:13px;font-weight:600;color:#0f6e56;background:#f0fdf7;border:1px solid #a0dfc0;border-radius:8px;padding:8px 12px;display:none;margin-top:8px}
+.hint-btn{font-size:12px;color:#888;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;margin-top:8px;display:block}
+.slabel{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.instr{font-size:13px;color:#666;background:#f5f5f5;border-radius:8px;padding:8px 12px;margin-bottom:1rem;line-height:1.6}
+</style>
+</head>
+<body>
+
+<h1>Stoichiometry — Solution Map</h1>
+<p style="font-size:13px;color:#666;margin-bottom:1.25rem;line-height:1.5">Work through each step to set up and solve a stoichiometry problem.</p>
+
+<p style="font-size:12px;color:#888;margin-bottom:6px">Try an example:</p>
+<div style="margin-bottom:1.25rem">
+  <span class="chip" onclick="fillEx('2H&#x2082; + O&#x2082; &#x2192; 2H&#x2082;O')">2H₂ + O₂ → 2H₂O (mass)</span>
+  <span class="chip" onclick="fillEx('N&#x2082; + 3H&#x2082; &#x2192; 2NH&#x2083;')">N₂ + 3H₂ → 2NH₃ (mass)</span>
+  <span class="chip" onclick="fillEx('HCl + NaOH &#x2192; NaCl + H&#x2082;O')">HCl + NaOH → NaCl + H₂O (solution)</span>
+</div>
+
+<!-- Step 1 -->
+<div class="step" id="s1">
+  <div class="step-hd">Step 1 — Enter the balanced equation <span class="chk" id="c1">✓</span></div>
+  <div class="tb-row">
+    <button class="tb" onclick="ins('→')">→</button>
+    <button class="tb" onclick="ins(' + ')">+</button>
+    <span class="sep"></span>
+    <button class="tb" onclick="ins('₂')">₂</button>
+    <button class="tb" onclick="ins('₃')">₃</button>
+    <button class="tb" onclick="ins('₄')">₄</button>
+    <button class="tb" onclick="ins('₅')">₅</button>
+    <button class="tb" onclick="ins('₆')">₆</button>
+    <button class="tb" onclick="ins('₇')">₇</button>
+    <span class="sep"></span>
+    <button class="tb" style="color:#c0392b" onclick="clearEq()">Clear</button>
+  </div>
+  <input type="text" id="eqIn" placeholder="e.g. 2H₂ + O₂ → 2H₂O" oninput="reset(1)"/>
+  <div style="margin-top:8px">
+    <button class="tb" style="padding:6px 16px;font-size:13px" onclick="checkEq()">Check equation</button>
+  </div>
+  <div class="fb" id="fb1"></div>
+</div>
+
+<!-- Step 2 -->
+<div class="step locked" id="s2">
+  <div class="step-hd">Step 2 — Select the given substance <span class="chk" id="c2">✓</span></div>
+  <p style="font-size:13px;color:#666">Which substance do you know the amount of?</p>
+  <div class="sub-btns" id="gBtns"></div>
+  <div class="fb" id="fb2"></div>
+</div>
+
+<!-- Step 3 -->
+<div class="step locked" id="s3">
+  <div class="step-hd">Step 3 — Enter the known amount <span class="chk" id="c3">✓</span></div>
+  <p style="font-size:13px;color:#666;margin-bottom:4px">How is the given substance measured?</p>
+  <div class="unit-row" style="margin-top:0">
+    <button class="u-btn" id="ug" onclick="pickGUnit('g')">
+      <span class="ul">g</span><span class="ud">grams</span>
+    </button>
+    <button class="u-btn" id="umol" onclick="pickGUnit('mol')">
+      <span class="ul">mol</span><span class="ud">moles</span>
+    </button>
+    <button class="u-btn" id="usol" onclick="pickGUnit('sol')">
+      <span class="ul">mol/L</span><span class="ud">solution</span>
+    </button>
+  </div>
+
+  <!-- plain amount (g or mol) -->
+  <input type="text" class="amt-in" id="amtIn" placeholder="e.g. 5.0" oninput="tryAmt()" style="display:none"/>
+
+  <!-- solution sub-inputs -->
+  <div class="sol-inputs" id="gSolInputs">
+    <p style="font-size:12px;color:#555;margin-bottom:10px">Enter the solution concentration and volume:</p>
+    <div class="sol-row">
+      <div class="sol-field">
+        <label>Molarity</label>
+        <input type="text" id="gMol" placeholder="e.g. 2.00"/>
+        <div class="sol-unit">mol/L</div>
+      </div>
+      <div class="sol-field">
+        <label>Volume</label>
+        <input type="text" id="gVol" placeholder="e.g. 0.500"/>
+        <div class="sol-unit">L</div>
+      </div>
+    </div>
+  </div>
+  <div class="fb" id="fb3"></div>
+</div>
+
+<!-- Step 4 -->
+<div class="step locked" id="s4">
+  <div class="step-hd">Step 4 — Select the substance to find <span class="chk" id="c4">✓</span></div>
+  <p style="font-size:13px;color:#666">Which substance do you want to calculate the amount of?</p>
+  <div class="sub-btns" id="tBtns"></div>
+  <div class="fb" id="fb4"></div>
+</div>
+
+<!-- Step 5 -->
+<div class="step locked" id="s5">
+  <div class="step-hd">Step 5 — Select the answer unit <span class="chk" id="c5">✓</span></div>
+  <p style="font-size:13px;color:#666;margin-bottom:4px">What form should the answer be in?</p>
+  <div class="unit-row">
+    <button class="u-btn" id="tug" onclick="pickTUnit('g')">
+      <span class="ul">g</span><span class="ud">grams</span>
+    </button>
+    <button class="u-btn" id="tumol" onclick="pickTUnit('mol')">
+      <span class="ul">mol</span><span class="ud">moles</span>
+    </button>
+    <button class="u-btn" id="tuM" onclick="pickTUnit('M')">
+      <span class="ul">mol/L</span><span class="ud">molarity</span>
+    </button>
+    <button class="u-btn" id="tuL" onclick="pickTUnit('L')">
+      <span class="ul">L</span><span class="ud">volume</span>
+    </button>
+  </div>
+
+  <!-- solution target sub-inputs -->
+  <div class="sol-inputs" id="tSolInputs">
+    <div id="tSolPrompt" style="font-size:12px;color:#555;margin-bottom:10px"></div>
+    <div class="sol-row">
+      <div class="sol-field" id="tSolField">
+        <label id="tSolLabel">Volume</label>
+        <input type="text" id="tSolVal" placeholder="e.g. 0.750"/>
+        <div class="sol-unit" id="tSolUnitLbl">L</div>
+      </div>
+    </div>
+  </div>
+  <div class="fb" id="fb5"></div>
+</div>
+
+<div id="buildRow" style="display:none">
+  <button class="go-btn" onclick="buildPuzzle()">Build the solution map ↗</button>
+</div>
+
+<!-- Puzzle -->
+<div id="puzzle" style="display:none;margin-top:.5rem">
+  <div class="sum-bar">
+    <div id="sumEq" style="font-weight:700;font-family:monospace;font-size:13px"></div>
+    <div id="sumMeta" style="color:#666;font-size:13px;margin-top:2px"></div>
+  </div>
+  <div class="instr">Click a card to select it (turns blue), then click a slot to place it. Use ↕ flip to swap top and bottom — watch all the units cancel except the last.</div>
+  <div class="slabel">Conversion chain</div>
+  <div class="chain-row" id="chain"></div>
+  <div class="ok-note" id="okNote">✓ All units cancel correctly — the answer appears at the end of the chain.</div>
+  <button class="hint-btn" onclick="doHint()">Need a hint?</button>
+  <div id="hintTxt" style="font-size:12px;color:#666;margin-top:4px;min-height:16px"></div>
+  <div style="margin-top:1.25rem" class="slabel">Conversion cards — click to select · ↕ flip swaps top &amp; bottom</div>
+  <div class="bank" id="bank"></div>
+</div>
+
+<script>
+// ── Element data ──
+var MASSES={H:1.008,He:4.003,Li:6.941,Be:9.012,B:10.81,C:12.011,N:14.007,O:15.999,F:19.00,Ne:20.18,Na:22.99,Mg:24.31,Al:26.98,Si:28.09,P:30.97,S:32.07,Cl:35.45,Ar:39.95,K:39.10,Ca:40.08,Fe:55.85,Co:58.93,Ni:58.69,Cu:63.55,Zn:65.38,Br:79.90,Ag:107.9,I:126.9,Ba:137.3,Pb:207.2,Mn:54.94,Cr:52.00,Ti:47.87,Sn:118.7,Au:197.0,Pt:195.1,W:183.8};
+var DI=['H2','O2','N2','F2','Cl2','Br2','I2'];
+var SOL=['Li','Be','B','C','Na','Mg','Al','Si','P','S','K','Ca','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Rb','Sr','Ag','Cd','Sn','Sb','Te','Cs','Ba','W','Pt','Au','Pb','Bi'];
+var NOB=['He','Ne','Ar','Kr','Xe'];
+var CPDS=['H2O','H2O2','CO','CO2','SO2','SO3','NO','NO2','N2O','N2O4','N2O5','P2O5','P4O10','SiO2','Al2O3','Fe2O3','Fe3O4','FeO','CuO','Cu2O','ZnO','MgO','CaO','Na2O','K2O','BaO','MnO','MnO2','Cr2O3','TiO2','SnO','PbO','HF','HCl','HBr','HI','HCN','HNO3','HNO2','H2SO4','H2SO3','H3PO4','H2CO3','HClO3','HClO4','H2S','NaOH','KOH','LiOH','NH3','NaCl','KCl','CaCl2','MgCl2','AlCl3','FeCl2','FeCl3','CuCl2','ZnCl2','BaCl2','AgCl','NaNO3','KNO3','AgNO3','NH4NO3','Na2SO4','K2SO4','CaSO4','MgSO4','BaSO4','CuSO4','FeSO4','Na2CO3','K2CO3','CaCO3','MgCO3','BaCO3','NaHCO3','KHCO3','Na3PO4','K3PO4','AlPO4','NaF','KF','CaF2','MgF2','NaI','KI','NaBr','KBr','AgBr','AgI','NH4Cl','CH4','C2H6','C3H8','C4H10','C2H4','C2H2','C6H6','CH3OH','C2H5OH','CH3COOH','HCOOH','CO(NH2)2','C6H12O6','C12H22O11','KCN','NaCN','N2H4','PCl3','PCl5','SF6','KMnO4','K2Cr2O7','K2CrO4','KClO3','NaClO','CaC2','Na2O2','Ca(OH)2','Ba(OH)2','Mg(OH)2','Al(OH)3','Fe(OH)2','Fe(OH)3','Fe(NO3)2','Fe(NO3)3','Cu(NO3)2','Zn(NO3)2','Ca(NO3)2','Mg(NO3)2','Al(NO3)3','Ba(NO3)2','Pb(NO3)2','Al2(SO4)3','Fe2(SO4)3','(NH4)2SO4'];
+
+// ── Chemistry helpers ──
+function s2a(f){return f.replace(/[₀₁₂₃₄₅₆₇₈₉]/g,function(d){return'₀₁₂₃₄₅₆₇₈₉'.indexOf(d).toString();});}
+function expandP(f){var s=f,p='';while(s!==p){p=s;s=s.replace(/\(([^)]+)\)(\d*)/g,function(m,inn,n){var mul=parseInt(n||'1');return inn.replace(/([A-Z][a-z]?)(\d*)/g,function(m2,el,c){return el+(parseInt(c||'1')*mul);});});}return s;}
+function countAtoms(raw){var f=expandP(s2a(raw.trim())),map={},re=/([A-Z][a-z]?)(\d*)/g,m;while((m=re.exec(f))!==null){var el=m[1],n=parseInt(m[2]||'1');if(!MASSES[el])return null;map[el]=(map[el]||0)+n;}return Object.keys(map).length?map:null;}
+function molarMass(raw){var f=expandP(s2a(raw.trim())),t=0,re=/([A-Z][a-z]?)(\d*)/g,m;while((m=re.exec(f))!==null){var el=m[1],n=parseInt(m[2]||'1');if(!MASSES[el])return null;t+=MASSES[el]*n;}return t||null;}
+function valSub(raw){
+  var f=s2a(raw.trim()),sg=f.match(/^([A-Z][a-z]?)(\d*)$/);
+  if(sg){var el=sg[1],n=parseInt(sg[2]||'1');if(!MASSES[el])return{ok:false,hint:'"'+raw+'" — "'+el+'" is not a recognised element.'};if(NOB.indexOf(el)>=0)return{ok:true};if(DI.indexOf(el+'2')>=0){if(n===2)return{ok:true};if(n===1)return{ok:false,hint:el+' is diatomic at room temp — write it as '+el+'₂.'};return{ok:false,hint:'Standard form of '+el+' is '+el+'₂.'};}if(SOL.indexOf(el)>=0&&n<=1)return{ok:true};return{ok:true};}
+  var at=countAtoms(f);if(!at){var els=[],re2=/([A-Z][a-z]?)/g,m2,bad=null;while((m2=re2.exec(f))!==null)els.push(m2[1]);for(var i=0;i<els.length;i++){if(!MASSES[els[i]]){bad=els[i];break;}}return bad?{ok:false,hint:'"'+raw+'" contains "'+bad+'" — not a recognised element.'}:{ok:false,hint:'"'+raw+'" could not be parsed.'};}
+  if(CPDS.indexOf(f)>=0)return{ok:true};return{ok:true,warn:'"'+raw+'" not in our library — verify it is a real compound.'};
+}
+function parseSide(side){return side.split('+').map(function(t){t=t.trim();var m=t.match(/^(\d+)\s*(.+)$/);var coeff=m?parseInt(m[1]):1,raw=m?m[2].trim():t;return{coeff:coeff,raw:raw,formula:s2a(raw)};});}
+function parseEqStr(str){var arr=str.indexOf('→')>=0?'→':'->';if(str.indexOf(arr)<0)return null;var pts=str.split(arr);return{reactants:parseSide(pts[0]),products:parseSide(pts[1])};}
+function isBalanced(parsed){
+  function sum(subs){var t={};for(var i=0;i<subs.length;i++){var c=countAtoms(subs[i].formula);if(!c)return null;var ks=Object.keys(c);for(var j=0;j<ks.length;j++)t[ks[j]]=(t[ks[j]]||0)+c[ks[j]]*subs[i].coeff;}return t;}
+  var L=sum(parsed.reactants),R=sum(parsed.products);if(!L||!R)return{ok:false,diffs:['Could not parse formulas.']};
+  var all={},diffs=[];Object.keys(L).forEach(function(e){all[e]=1;});Object.keys(R).forEach(function(e){all[e]=1;});
+  Object.keys(all).forEach(function(el){var l=L[el]||0,r=R[el]||0;if(l!==r)diffs.push(el+': '+l+' on left, '+r+' on right');});
+  return{ok:diffs.length===0,diffs:diffs};
+}
+function norm(s){return s.trim().toLowerCase().replace(/\s+/g,'');}
+function cSF(str){str=str.trim();if(!str||isNaN(parseFloat(str)))return 1;var hd=str.indexOf('.')>=0,d=str.replace('.','').replace(/^0+/,'');if(!d)return 1;return hd?d.length:(d.replace(/0+$/,'').length||1);}
+function toSF(n,sf){if(!n)return'0';var mag=Math.floor(Math.log10(Math.abs(n))),f=Math.pow(10,sf-1-mag),r=Math.round(n*f)/f;return r.toFixed(Math.max(0,sf-1-mag));}
+function minSF(){var args=Array.prototype.slice.call(arguments);return Math.min.apply(null,args.map(function(s){return cSF(String(s));}));}
+
+// ── State ──
+var EQ=null,gSub=null,_gUnit=null,gUnit=null,tSub=null,tUnit=null;
+// Given amount state
+var gAmt=null;        // string for g/mol
+var gMolarity=null;   // string for solution molarity
+var gVolume=null;     // string for solution volume
+// Target extra state
+var tKnown=null;      // string — volume (for M answer) or molarity (for L answer)
+var cards=[],slots=[],selCard=null,finalAns='',finalUnit='',SIG=1,hints=[],hintIdx=0;
+
+var eqIn=document.getElementById('eqIn');
+
+function lock(n,s){document.getElementById('s'+n).classList.toggle('locked',s);}
+function chk(n,on){document.getElementById('c'+n).classList.toggle('on',on);}
+function setFb(n,msg,type){var el=document.getElementById('fb'+n);el.innerHTML=msg;el.className='fb '+(type||'');}
+function hideFb(n){document.getElementById('fb'+n).className='fb';}
+
+function reset(from){
+  if(from<=1){
+    EQ=null;gSub=null;_gUnit=null;gUnit=null;gAmt=null;gMolarity=null;gVolume=null;tSub=null;tUnit=null;tKnown=null;
+    chk(1,false);hideFb(1);
+    lock(2,true);chk(2,false);hideFb(2);document.getElementById('gBtns').innerHTML='';
+    resetStep3UI();lock(3,true);chk(3,false);hideFb(3);
+    lock(4,true);chk(4,false);hideFb(4);document.getElementById('tBtns').innerHTML='';
+    resetStep5UI();lock(5,true);chk(5,false);hideFb(5);
+    document.getElementById('buildRow').style.display='none';
+    document.getElementById('puzzle').style.display='none';
+  }
+  if(from===3){_gUnit=null;gUnit=null;gAmt=null;gMolarity=null;gVolume=null;resetStep3UI();chk(3,false);hideFb(3);lock(4,true);chk(4,false);hideFb(4);document.getElementById('tBtns').innerHTML='';resetStep5UI();lock(5,true);chk(5,false);hideFb(5);document.getElementById('buildRow').style.display='none';}
+  if(from===4){tSub=null;chk(4,false);hideFb(4);resetStep5UI();tUnit=null;tKnown=null;lock(5,true);chk(5,false);hideFb(5);document.getElementById('buildRow').style.display='none';}
+  if(from===5){tUnit=null;tKnown=null;resetStep5UI();chk(5,false);hideFb(5);document.getElementById('buildRow').style.display='none';}
+}
+
+function resetStep3UI(){
+  ['ug','umol','usol'].forEach(function(id){document.getElementById(id).classList.remove('sel');});
+  document.getElementById('amtIn').style.display='none';
+  document.getElementById('amtIn').value='';
+  document.getElementById('gSolInputs').classList.remove('show');
+  document.getElementById('gMol').value='';
+  document.getElementById('gVol').value='';
+}
+
+function resetStep5UI(){
+  ['tug','tumol','tuM','tuL'].forEach(function(id){document.getElementById(id).classList.remove('sel');});
+  document.getElementById('tSolInputs').classList.remove('show');
+  document.getElementById('tSolVal').value='';
+}
+
+function fillEx(eq){eqIn.value=eq;reset(1);}
+function clearEq(){eqIn.value='';reset(1);eqIn.focus();}
+function ins(ch){var s=eqIn.selectionStart,e=eqIn.selectionEnd;eqIn.value=eqIn.value.slice(0,s)+ch+eqIn.value.slice(e);eqIn.selectionStart=eqIn.selectionEnd=s+ch.length;eqIn.focus();reset(1);}
+
+function checkEq(){
+  var raw=eqIn.value.trim();
+  if(!raw){setFb(1,'Please enter an equation.','err');return;}
+  var parsed=parseEqStr(raw);
+  if(!parsed){setFb(1,'No reaction arrow found — use the → button.','err');return;}
+  var all=parsed.reactants.concat(parsed.products),errs=[],warns=[];
+  for(var i=0;i<all.length;i++){var v=valSub(all[i].raw);if(!v.ok)errs.push(v.hint);else if(v.warn)warns.push(v.warn);}
+  if(errs.length){setFb(1,errs.map(function(h){return'• '+h;}).join('<br>'),'err');return;}
+  var bal=isBalanced(parsed);
+  if(!bal.ok){setFb(1,'This equation is not balanced. Atom counts differ:<br>'+bal.diffs.map(function(d){return'• '+d;}).join('<br>'),'err');return;}
+  EQ=parsed;chk(1,true);
+  setFb(1,'✓ Equation is balanced!'+(warns.length?'<br><small>⚠ '+warns.join('; ')+'</small>':''),'ok');
+  lock(2,false);buildGBtns();
+}
+
+function buildGBtns(){
+  var all=EQ.reactants.concat(EQ.products),c=document.getElementById('gBtns');c.innerHTML='';
+  all.forEach(function(s){var b=document.createElement('button');b.className='sub-btn';b.textContent=s.raw;b.onclick=(function(sub){return function(){pickGSub(sub);};})(s);b.id='gb_'+s.formula;c.appendChild(b);});
+}
+
+function pickGSub(s){
+  gSub=s;
+  document.querySelectorAll('#gBtns .sub-btn').forEach(function(b){b.classList.remove('sel');});
+  document.getElementById('gb_'+s.formula).classList.add('sel');
+  chk(2,true);setFb(2,'Selected: '+s.raw,'ok');
+  lock(3,false);reset(3);
+}
+
+function pickGUnit(u){
+  _gUnit=u;
+  ['ug','umol','usol'].forEach(function(id){document.getElementById(id).classList.remove('sel');});
+  document.getElementById(u==='g'?'ug':u==='mol'?'umol':'usol').classList.add('sel');
+  // Show/hide inputs
+  if(u==='sol'){
+    document.getElementById('amtIn').style.display='none';
+    document.getElementById('gSolInputs').classList.add('show');
+  } else {
+    document.getElementById('amtIn').style.display='block';
+    document.getElementById('gSolInputs').classList.remove('show');
+  }
+  tryAmt();
+}
+
+function tryAmt(){
+  // Clear downstream
+  gAmt=null;gMolarity=null;gVolume=null;gUnit=null;
+  if(!_gUnit){return;}
+
+  if(_gUnit==='sol'){
+    var mStr=document.getElementById('gMol').value.trim();
+    var vStr=document.getElementById('gVol').value.trim();
+    var mVal=parseFloat(mStr),vVal=parseFloat(vStr);
+    if(!mStr||isNaN(mVal)||mVal<=0||!vStr||isNaN(vVal)||vVal<=0){
+      if(gUnit!==null){chk(3,false);hideFb(3);lock(4,true);chk(4,false);hideFb(4);document.getElementById('tBtns').innerHTML='';lock(5,true);resetStep5UI();document.getElementById('buildRow').style.display='none';}
+      return;
+    }
+    gMolarity=mStr;gVolume=vStr;gUnit='sol';
+    chk(3,true);setFb(3,'✓ Given: '+mStr+' mol/L × '+vStr+' L of '+gSub.raw,'ok');
+  } else {
+    var val=document.getElementById('amtIn').value.trim();
+    var num=parseFloat(val);
+    if(!val||isNaN(num)||num<=0){
+      if(gUnit!==null){chk(3,false);hideFb(3);lock(4,true);chk(4,false);hideFb(4);document.getElementById('tBtns').innerHTML='';lock(5,true);resetStep5UI();document.getElementById('buildRow').style.display='none';}
+      return;
+    }
+    gAmt=val;gUnit=_gUnit;
+    chk(3,true);setFb(3,'✓ Given: '+gAmt+' '+gUnit+' of '+gSub.raw,'ok');
+  }
+  lock(4,false);buildTBtns();reset(4);
+}
+
+// wire solution inputs
+document.getElementById('gMol').oninput=tryAmt;
+document.getElementById('gVol').oninput=tryAmt;
+document.getElementById('amtIn').oninput=tryAmt;
+
+function buildTBtns(){
+  var all=EQ.reactants.concat(EQ.products),c=document.getElementById('tBtns');c.innerHTML='';
+  all.forEach(function(s){
+    var b=document.createElement('button');b.className='sub-btn';b.textContent=s.raw;
+    if(s.formula===gSub.formula){b.classList.add('dim');b.title='Already selected as given';}
+    else b.onclick=(function(sub){return function(){pickTSub(sub);};})(s);
+    b.id='tb_'+s.formula;c.appendChild(b);
+  });
+}
+
+function pickTSub(s){
+  tSub=s;
+  document.querySelectorAll('#tBtns .sub-btn').forEach(function(b){b.classList.remove('sel');});
+  document.getElementById('tb_'+s.formula).classList.add('sel');
+  chk(4,true);setFb(4,'Selected: '+s.raw,'ok');
+  lock(5,false);reset(5);
+}
+
+function pickTUnit(u){
+  tUnit=u;tKnown=null;
+  ['tug','tumol','tuM','tuL'].forEach(function(id){document.getElementById(id).classList.remove('sel');});
+  document.getElementById(u==='g'?'tug':u==='mol'?'tumol':u==='M'?'tuM':'tuL').classList.add('sel');
+
+  var solIn=document.getElementById('tSolInputs');
+  if(u==='M'){
+    // need volume of target solution
+    solIn.classList.add('show');
+    document.getElementById('tSolPrompt').textContent='To find molarity, enter the volume of the target solution:';
+    document.getElementById('tSolLabel').textContent='Volume of target solution';
+    document.getElementById('tSolUnitLbl').textContent='L';
+    document.getElementById('tSolVal').placeholder='e.g. 0.750';
+    document.getElementById('tSolVal').oninput=tryTKnown;
+    chk(5,false);hideFb(5);document.getElementById('buildRow').style.display='none';
+  } else if(u==='L'){
+    // need molarity of target solution
+    solIn.classList.add('show');
+    document.getElementById('tSolPrompt').textContent='To find volume, enter the molarity of the target solution:';
+    document.getElementById('tSolLabel').textContent='Molarity of target solution';
+    document.getElementById('tSolUnitLbl').textContent='mol/L';
+    document.getElementById('tSolVal').placeholder='e.g. 1.50';
+    document.getElementById('tSolVal').oninput=tryTKnown;
+    chk(5,false);hideFb(5);document.getElementById('buildRow').style.display='none';
+  } else {
+    solIn.classList.remove('show');
+    chk(5,true);
+    setFb(5,'✓ Answer will be in '+u+' of '+tSub.raw,'ok');
+    document.getElementById('buildRow').style.display='block';
+  }
+}
+
+function tryTKnown(){
+  var val=document.getElementById('tSolVal').value.trim();
+  var num=parseFloat(val);
+  if(!val||isNaN(num)||num<=0){tKnown=null;chk(5,false);hideFb(5);document.getElementById('buildRow').style.display='none';return;}
+  tKnown=val;
+  var lbl=tUnit==='M'?'molarity ('+val+' L of target solution)':'volume ('+val+' mol/L target solution)';
+  chk(5,true);setFb(5,'✓ Finding '+lbl,'ok');
+  document.getElementById('buildRow').style.display='block';
+}
+
+// ── Puzzle engine ──
+function getCard(id){for(var i=0;i<cards.length;i++)if(cards[i].id===id)return cards[i];return null;}
+function curN(c){return c.flipped?c.b.num:c.a.num;}
+function curD(c){return c.flipped?c.b.den:c.a.den;}
+function isOK(card){return card.slotIdx>=0&&card.slotIdx===card.correct&&card.flipped===card.needFlip;}
+
+function cancelState(){
+  // Gather consecutive correct slots
+  var okCards=[];
+  for(var i=0;i<slots.length;i++){
+    var cid=slots[i];if(!cid)break;
+    var card=getCard(cid);if(!isOK(card))break;
+    okCards.push({idx:i,cid:cid,card:card});
+  }
+  var res={gCx:false,cards:{}};
+  if(okCards.length===0)return res;
+
+  var allDone=(okCards.length===slots.length);
+
+  // Walk through cancellations
+  var givenUnitStr;
+  if(gUnit==='sol') givenUnitStr='1 L';
+  else if(gUnit==='g') givenUnitStr='g '+gSub.raw;
+  else givenUnitStr='mol '+gSub.raw;
+
+  var pending=givenUnitStr;
+  var lastOK=-1;
+  for(var j=0;j<okCards.length;j++){
+    var cid2=okCards[j].cid,card2=okCards[j].card;
+    var den=curD(card2),num=curN(card2);
+    if(norm(den)===norm(pending)){
+      if(!res.cards[cid2])res.cards[cid2]={nCx:false,dCx:false,nSurv:false};
+      res.cards[cid2].dCx=true;
+      if(j===0){res.gCx=true;}
+      else{
+        var prevCid=okCards[j-1].cid;
+        if(!res.cards[prevCid])res.cards[prevCid]={nCx:false,dCx:false,nSurv:false};
+        res.cards[prevCid].nCx=true;
+      }
+      pending=num;
+      lastOK=j;
+    } else break;
+  }
+
+  // Mark last correct card's numerator as surviving (blue) when all done
+  if(allDone&&lastOK>=0){
+    var lastCid=okCards[lastOK].cid;
+    if(!res.cards[lastCid])res.cards[lastCid]={nCx:false,dCx:false,nSurv:false};
+    res.cards[lastCid].nCx=false;
+    res.cards[lastCid].nSurv=true;
+  }
+  return res;
+}
+
+function cardHTML(card,nCx,dCx,nSurv){
+  return '<div class="clbl">'+card.lbl+'</div>'+
+    '<div class="cnum'+(nCx?' cx':(nSurv?' ck':''))+'">'+curN(card)+'</div>'+
+    '<div class="cbar"></div>'+
+    '<div class="cden'+(dCx?' cx':'')+'">'+curD(card)+'</div>';
+}
+
+function renderBank(){
+  var bank=document.getElementById('bank');bank.innerHTML='';
+  cards.filter(function(c){return c.slotIdx===-1;}).forEach(function(card){
+    var wrap=document.createElement('div');wrap.className='bwrap';
+    var div=document.createElement('div');
+    div.className='card'+(selCard===card.id?' sel':'');
+    div.innerHTML=cardHTML(card,false,false,false);
+    div.onclick=(function(id){return function(){selCard=(selCard===id)?null:id;render();};})(card.id);
+    wrap.appendChild(div);
+    var fb=document.createElement('button');fb.className='flip-btn';fb.textContent='↕ flip';
+    fb.onclick=(function(c){return function(e){e.stopPropagation();c.flipped=!c.flipped;render();};})(card);
+    wrap.appendChild(fb);bank.appendChild(wrap);
+  });
+}
+
+function renderChain(){
+  var cs=cancelState();
+  var gu=document.getElementById('gUnit');
+  if(gu)gu.className='g-unit'+(cs.gCx?' cx':'');
+  for(var i=0;i<slots.length;i++){
+    var zone=document.getElementById('z'+i),fsm=document.getElementById('f'+i);
+    if(!zone)continue;
+    var cid=slots[i];
+    if(!cid){
+      zone.className='slot'+(selCard?' rdy':'');
+      zone.innerHTML='<span style="font-size:12px;color:#aaa">'+(selCard?'place here':'empty')+'</span>';
+      zone.onclick=(function(idx){return selCard?function(){placeCard(selCard,idx);}:null;})(i);
+      if(fsm){fsm.className='flip-sm';fsm.onclick=null;}
+    } else {
+      var card=getCard(cid),ok=isOK(card),cc=cs.cards[cid]||{nCx:false,dCx:false,nSurv:false};
+      zone.className='slot occ';zone.onclick=null;
+      var bc=ok?'#1a8a4a':'#c0392b';
+      zone.innerHTML='<div style="width:100%;height:100%;border:1.5px solid '+bc+';border-radius:10px;background:#fff;display:grid;grid-template-rows:1fr auto 1fr;align-items:center;padding:5px 8px;text-align:center;position:relative">'+
+        cardHTML(card,cc.nCx,cc.dCx,cc.nSurv)+
+        '<button onclick="retBank(\''+card.id+'\')" style="position:absolute;top:3px;right:5px;font-size:12px;background:none;border:none;cursor:pointer;color:#aaa;line-height:1;padding:0">✕</button></div>';
+      if(fsm){fsm.className='flip-sm on';fsm.onclick=(function(c){return function(e){e.stopPropagation();c.flipped=!c.flipped;render();};})(card);}
+    }
+  }
+}
+
+function render(){renderBank();renderChain();evaluate();}
+
+function placeCard(cardId,slotIdx){
+  var card=getCard(cardId);if(!card)return;
+  if(slots[slotIdx]){var ev=getCard(slots[slotIdx]);if(ev)ev.slotIdx=-1;slots[slotIdx]=null;}
+  if(card.slotIdx>=0){slots[card.slotIdx]=null;}
+  card.slotIdx=slotIdx;slots[slotIdx]=cardId;selCard=null;render();
+}
+
+function retBank(cardId){
+  var card=getCard(cardId);if(!card)return;
+  if(card.slotIdx>=0){slots[card.slotIdx]=null;}
+  card.slotIdx=-1;render();
+}
+
+function evaluate(){
+  var all=slots.length>0&&slots.every(function(cid){if(!cid)return false;var c=getCard(cid);return c&&isOK(c);});
+  document.getElementById('okNote').style.display=all?'block':'none';
+  var ab=document.getElementById('ansBox');
+  if(ab)ab.innerHTML=all?('<div class="av">'+finalAns+'</div><div class="au">'+finalUnit+'</div><div class="sf">'+SIG+' sig fig'+(SIG===1?'':'s')+'</div>'):'<div class="aq">?</div>';
+}
+
+function doHint(){if(!hints.length)return;document.getElementById('hintTxt').textContent=hints[hintIdx%hints.length];hintIdx++;}
+
+// ── Build puzzle ──
+function buildPuzzle(){
+  var mmG=molarMass(gSub.formula),mmT=molarMass(tSub.formula);
+  if(!mmG||!mmT){alert('Cannot compute molar mass — check formulas.');return;}
+  var mmGr=mmG.toFixed(2),mmTr=mmT.toFixed(2);
+  var gc=gSub.coeff,tc=tSub.coeff;
+  cards=[];slots=[];selCard=null;hintIdx=0;
+  var sc=0;
+
+  // ── Determine moles of given substance and sig figs ──
+  var molesGiven;
+  if(gUnit==='sol'){
+    var mVal=parseFloat(gMolarity),vVal=parseFloat(gVolume);
+    molesGiven=mVal*vVal;
+    SIG=minSF(gMolarity,gVolume);
+  } else if(gUnit==='g'){
+    molesGiven=parseFloat(gAmt)/mmG;
+    SIG=cSF(gAmt);
+  } else {
+    molesGiven=parseFloat(gAmt);
+    SIG=cSF(gAmt);
+  }
+
+  // ── Given-side cards ──
+  if(gUnit==='sol'){
+    // Card: M mol gSub / 1 L  (correct: sideA, no flip needed — g on "top" = mol/L on top)
+    // sideA: molarity mol/L on top, 1 L on bottom → cancels "L gSub" from given block
+    cards.push({id:'molarity_g',lbl:'molarity · '+gSub.raw,
+      a:{num:gMolarity+' mol '+gSub.raw, den:'1 L'},
+      b:{num:'1 L',                       den:gMolarity+' mol '+gSub.raw},
+      correct:sc,needFlip:false,flipped:false,slotIdx:-1});
+    slots.push(null);sc++;
+  } else if(gUnit==='g'){
+    cards.push({id:'mmG',lbl:'molar mass · '+gSub.raw,
+      a:{num:mmGr+' g '+gSub.raw, den:'1 mol '+gSub.raw},
+      b:{num:'1 mol '+gSub.raw,   den:mmGr+' g '+gSub.raw},
+      correct:sc,needFlip:true,flipped:false,slotIdx:-1});
+    slots.push(null);sc++;
+  }
+  // mol → mol: no card if gUnit===mol
+
+  // ── Mole ratio (always present) ──
+  cards.push({id:'mr',lbl:'mole ratio',
+    a:{num:tc+' mol '+tSub.raw, den:gc+' mol '+gSub.raw},
+    b:{num:gc+' mol '+gSub.raw, den:tc+' mol '+tSub.raw},
+    correct:sc,needFlip:false,flipped:false,slotIdx:-1});
+  slots.push(null);sc++;
+
+  // ── Target-side cards ──
+  if(tUnit==='g'){
+    cards.push({id:'mmT',lbl:'molar mass · '+tSub.raw,
+      a:{num:mmTr+' g '+tSub.raw, den:'1 mol '+tSub.raw},
+      b:{num:'1 mol '+tSub.raw,   den:mmTr+' g '+tSub.raw},
+      correct:sc,needFlip:false,flipped:false,slotIdx:-1});
+    slots.push(null);sc++;
+  } else if(tUnit==='M'){
+    // divide moles by volume → mol/L
+    // card: 1 L / tKnown L  ... wait, actually: answer = mol / V = mol/L
+    // dimensional analysis: mol tSub × (1 / V L) = mol/L
+    // card numerator: 1 mol/L tSub ... no.
+    // correct: sideA num = "1 mol/L "+tSub.raw, den = tKnown+" L" — but that's not right either
+    // Actually: mol_target × (1 L / tKnown L) → that gives a dimensionless ratio
+    // Correct way: result = mol / V, units = mol tSub / L
+    // Card: num = "1 L", den = tKnown+" L"  → gives dimensionless... 
+    // Better: card num = "1", den = tKnown+" L"  then mol × 1/V = mol/L
+    // Cleanest dimensional analysis:
+    //   X mol tSub × (1 / V L) = X/V mol/L tSub
+    // Card: num = "1",  den = tKnown+" L"  → result unit = mol tSub / L = M
+    // But we want to show "mol/L tSub" surviving.
+    // Let's frame it as: multiply by 1/V with unit label
+    cards.push({id:'divV',lbl:'÷ volume · '+tSub.raw,
+      a:{num:tKnown+' L', den:'1'},
+      b:{num:'1',         den:tKnown+' L'},
+      correct:sc,needFlip:true,flipped:false,slotIdx:-1});
+    slots.push(null);sc++;
+  } else if(tUnit==='L'){
+    // divide moles by molarity → L
+    // mol tSub × (1 L / tKnown mol/L tSub) = L
+    // but mol/L cancels mol leaving L
+    // Card: num = "1 L", den = tKnown+" mol/L "+tSub.raw
+    cards.push({id:'divM',lbl:'÷ molarity · '+tSub.raw,
+      a:{num:tKnown+' mol '+tSub.raw,    den:'1 L'},
+      b:{num:'1 L',                      den:tKnown+' mol '+tSub.raw},
+      correct:sc,needFlip:true,flipped:false,slotIdx:-1});
+    slots.push(null);sc++;
+  }
+  // tUnit==='mol': no final card needed
+
+  cards.sort(function(){return Math.random()-.5;});
+
+  // ── Calculate answer ──
+  var molesTgt=molesGiven*(tc/gc);
+  var ans;
+  if(tUnit==='g')       ans=molesTgt*mmT;
+  else if(tUnit==='mol')ans=molesTgt;
+  else if(tUnit==='M')  ans=molesTgt/parseFloat(tKnown);
+  else                   ans=molesTgt/parseFloat(tKnown); // L: moles/molarity
+
+  finalAns=toSF(ans,SIG);
+  if(tUnit==='g')       finalUnit='g '+tSub.raw;
+  else if(tUnit==='mol')finalUnit='mol '+tSub.raw;
+  else if(tUnit==='M')  finalUnit='mol/L '+tSub.raw;
+  else                   finalUnit='L '+tSub.raw;
+
+  // ── Hints ──
+  hints=[];
+  if(gUnit==='sol') hints.push('The molarity card needs "L" on the bottom to cancel the "L" from your given volume. It should have "'+gMolarity+' mol '+gSub.raw+'" on top and "1 L" on bottom — try it as-is before flipping.');
+  if(gUnit==='g')   hints.push('The molar mass card for '+gSub.raw+' starts with g on top. Flip it so "g '+gSub.raw+'" is on the bottom to cancel your starting grams.');
+  hints.push('The mole ratio needs "mol '+gSub.raw+'" on the bottom to cancel the previous numerator.');
+  if(tUnit==='g')   hints.push('The last card needs "g '+tSub.raw+'" on top and "mol '+tSub.raw+'" on the bottom.');
+  if(tUnit==='M')   hints.push('The last card divides by the target volume. It starts with "'+tKnown+' L" on top and "1" on bottom — flip it so "1" is on top and "'+tKnown+' L" is on the bottom. This turns mol into mol/L.');
+  if(tUnit==='L')   hints.push('The molarity card starts with mol on top (like mol/L). Flip it so "1 L" is on top and "'+tKnown+' mol '+tSub.raw+'" is on the bottom — the mol cancels with the previous step, leaving L.');
+  hints.push("Each card's bottom unit must match the top unit of the step to its left.");
+
+  // ── Summary bar ──
+  var givenDesc;
+  if(gUnit==='sol') givenDesc=gMolarity+' mol/L &times; '+gVolume+' L of '+gSub.raw;
+  else if(gUnit==='g') givenDesc=gAmt+' g '+gSub.raw;
+  else givenDesc=gAmt+' mol '+gSub.raw;
+  document.getElementById('sumEq').textContent=eqIn.value.trim();
+  document.getElementById('sumMeta').innerHTML='Starting: <b>'+givenDesc+'</b> &nbsp;→&nbsp; Find: <b>'+finalUnit+'</b>';
+
+  // ── Build chain DOM ──
+  var chain=document.getElementById('chain');chain.innerHTML='';
+
+  // Given block
+  var gb=document.createElement('div');gb.className='given-blk';
+  var givenBlockHTML;
+  if(gUnit==='sol'){
+    // Show volume as the starting value (L substance)
+    givenBlockHTML='<span class="g-val">'+gVolume+'</span><span class="g-unit" id="gUnit">&nbsp;L&nbsp;'+gSub.raw+'</span>';
+  } else if(gUnit==='g'){
+    givenBlockHTML='<span class="g-val">'+gAmt+'</span><span class="g-unit" id="gUnit">&nbsp;g&nbsp;'+gSub.raw+'</span>';
+  } else {
+    givenBlockHTML='<span class="g-val">'+gAmt+'</span><span class="g-unit" id="gUnit">&nbsp;mol&nbsp;'+gSub.raw+'</span>';
+  }
+  gb.innerHTML=givenBlockHTML;
+  chain.appendChild(gb);
+
+  for(var i=0;i<slots.length;i++){
+    var xEl=document.createElement('span');xEl.className='op';xEl.textContent='×';chain.appendChild(xEl);
+    var sw=document.createElement('div');sw.className='slot-wrap';
+    var zone=document.createElement('div');zone.className='slot';zone.id='z'+i;
+    zone.innerHTML='<span style="font-size:12px;color:#aaa">empty</span>';
+    sw.appendChild(zone);
+    var fsm=document.createElement('button');fsm.className='flip-sm';fsm.id='f'+i;fsm.textContent='↕ flip';
+    sw.appendChild(fsm);chain.appendChild(sw);
+  }
+  var eqOp=document.createElement('span');eqOp.className='op';eqOp.textContent='=';chain.appendChild(eqOp);
+  var ab=document.createElement('div');ab.className='ans-blk';ab.id='ansBox';ab.innerHTML='<div class="aq">?</div>';chain.appendChild(ab);
+
+  document.getElementById('okNote').style.display='none';
+  document.getElementById('hintTxt').textContent='';
+  document.getElementById('puzzle').style.display='block';
+  document.getElementById('puzzle').scrollIntoView({behavior:'smooth',block:'start'});
+  render();
+}
+</script>
+</body>
+</html>
